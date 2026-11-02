@@ -1,24 +1,23 @@
-FROM golang:1.23-alpine AS builder
-
+FROM golang:alpine AS builder
 WORKDIR /app
 
-RUN apk add --no-cache git gcc musl-dev
+ENV GOTOOLCHAIN=auto
+RUN apk add --no-cache git
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server cmd/api/main.go
 
-FROM alpine:3.19
-
+FROM alpine:latest
 WORKDIR /app
 
 RUN apk add --no-cache ca-certificates tzdata
+ENV TZ=Asia/Jakarta
 
-COPY --from=builder /app/bin/api /app/api
-COPY .env.example /app/.env
+COPY --from=builder /app/server .
 
 EXPOSE 3011
 
-CMD ["/app/api"]
+CMD ["./server"]
